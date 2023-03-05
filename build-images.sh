@@ -31,6 +31,7 @@ mvImages(){
     fi
 
     rm -r ${PKGLISTDIR}/*
+    cp gnome-x64.packages ${PKGLISTDIR}/gnome-x64.packages.txt
     cp base-x64.packages ${PKGLISTDIR}/base-x64.packages.txt
     cp cinnamon-x64.packages ${PKGLISTDIR}/cinnamon-x64.packages.txt
     cp e17-x64.packages ${PKGLISTDIR}/e17-x64.packages.txt
