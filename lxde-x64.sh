@@ -23,7 +23,7 @@ sudo ./mklive.sh \
     -p "$(grep '^[^#].' ${DESKTOP}-x64.packages)" \
     -T "Void Linux ${DESKTOP} Unofficial" \
     -o ${FILENAME}-x86_64-${KERNEL}-${DATE}.iso \
-    -S "acpid dbus dhcpcd wpa_supplicant lxdm polkitd"
+    -S "acpid dbus dhcpcd wpa_supplicant lightdm polkitd"
 
 if [ ! -f ${FILENAME}-x86_64-${KERNEL}-${DATE}.iso ];then
     retries=${1}
