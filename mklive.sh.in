@@ -318,11 +318,6 @@ done
 shift $((OPTIND - 1))
 XBPS_REPOSITORY="$XBPS_REPOSITORY --repository=https://repo-default.voidlinux.org/current --repository=https://repo-default.voidlinux.org/current/musl"
 
-case $BASE_ARCH in
-    x86_64*|i686*) ;;
-    *) >&2 echo architecture $BASE_ARCH not supported by mklive.sh; exit 1;;
-esac
-
 # Configure dracut to use overlayfs for the writable overlay.
 BOOT_CMDLINE="$BOOT_CMDLINE rd.live.overlay.overlayfs=1 "
 
@@ -338,6 +333,11 @@ ARCH=$(xbps-uhelper arch)
 : ${SQUASHFS_COMPRESSION:=xz}
 : ${BASE_SYSTEM_PKG:=base-system}
 : ${BOOT_TITLE:="Void Linux"}
+
+case $BASE_ARCH in
+    x86_64*|i686*) ;;
+    *) >&2 echo architecture $BASE_ARCH not supported by mklive.sh; exit 1;;
+esac
 
 # Required packages in the image for a working system.
 PACKAGE_LIST="$BASE_SYSTEM_PKG $PACKAGE_LIST"
@@ -360,7 +360,7 @@ BOOT_DIR="$IMAGEDIR/boot"
 ISOLINUX_DIR="$BOOT_DIR/isolinux"
 GRUB_DIR="$BOOT_DIR/grub"
 CURRENT_STEP=0
-STEP_COUNT=9
+STEP_COUNT=10
 [ -n "${INCLUDE_DIRECTORY}" ] && STEP_COUNT=$((STEP_COUNT+1))
 
 : ${SYSLINUX_DATADIR:="$VOIDHOSTDIR"/usr/lib/syslinux}
