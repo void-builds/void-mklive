@@ -20,6 +20,9 @@ terminus-font
 dejavu-fonts-ttf 
 alsa-plugins-pulseaudio
 
+#DISPLAY MANAGER
+lightdm
+lightdm-gtk3-greeter
 
 #USERLAND PACKAGES
 gptfdisk
@@ -30,7 +33,6 @@ dbus-elogind-x11
 exfat-utils
 fuse-exfat
 wget
-lxdm
 micro
 xdg-utils
 xdg-desktop-portal
@@ -43,6 +45,7 @@ AppStream
 libvdpau-va-gl 
 vdpauinfo
 pipewire
+wireplumber
 gstreamer1-pipewire
 upower
 flatpak

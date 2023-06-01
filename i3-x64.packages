@@ -8,6 +8,10 @@ cryptsetup
 lvm2 
 mdadm 
 
+# LOGIN
+lightdm
+lightdm-gtk3-greeter
+
 # X PACKAGES
 elogind
 dbus-elogind
@@ -29,7 +33,6 @@ alsa-plugins-pulseaudio
 #USERLAND PACKAGES
 gptfdisk
 wget
-lxdm
 nano
 xdg-utils
 xdg-desktop-portal
@@ -42,6 +45,7 @@ AppStream
 libvdpau-va-gl 
 vdpauinfo
 pipewire
+wireplumber
 gstreamer1-pipewire
 upower
 flatpak

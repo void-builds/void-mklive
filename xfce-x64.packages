@@ -9,7 +9,7 @@
     mdadm 
 
 # XORG PACKAGES
-    xorg-minimal 
+    xorg 
     xorg-input-drivers 
     xorg-video-drivers
     xrandr
@@ -28,10 +28,10 @@
     dkms
 
 # SOUND
-    alsa-plugins-pulseaudio
     paprefs
     pavucontrol
     pipewire
+    wireplumber
     alsa-utils
     gstreamer1-pipewire
 
@@ -43,7 +43,8 @@
     
 
 # DESKTOP ENVIRONMENT
-    lxdm
+    lightdm
+    lightdm-gtk3-greeter
     xfce4 
     xfce4-plugins
     xdg-utils

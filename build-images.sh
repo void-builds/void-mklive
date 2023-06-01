@@ -296,7 +296,7 @@ genHtml(){
 	
 	echo "<H4 style="color:cyan">Build process initiated at:</H4> $(date +%R) MST  ($(date -u +%R)  UTC) on $(date +%D)" >> ${HTMLDIR}/${FILENAME}
 	echo "<H4 style="color:cyan">ETA: 2 hours from initiation time</H4></br>" >> ${HTMLDIR}/${FILENAME}
-	
+	echo "<H4 style="color:yellow">Note: ISO files will not appear in downloads until all have been successfully built</H4></br>" >> ${HTMLDIR}/${FILENAME}
 
     echo "<hr>" >> ${HTMLDIR}/${FILENAME}
 

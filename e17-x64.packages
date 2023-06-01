@@ -18,8 +18,11 @@ xauth
 font-misc-misc 
 terminus-font 
 dejavu-fonts-ttf 
-alsa-plugins-pulseaudio
 
+
+#LOGIN
+lightdm
+lightdm-gtk3-greeter
 
 #USERLAND PACKAGES
 gptfdisk
@@ -30,7 +33,6 @@ polkit-elogind
 exfat-utils
 fuse-exfat
 wget
-lxdm
 enlightenment
 terminology
 upower
@@ -46,6 +48,8 @@ libvdpau-va-gl
 vdpauinfo
 pipewire
 gstreamer1-pipewire
+wireplumber
+libjack-pipewire
 upower
 flatpak
 zenity
@@ -55,9 +59,8 @@ xdg-utils
 vim
 git
 alsa-utils
-paprefs
-pasystray
 pavucontrol
+alsa-pipewire
 xterm
 htop
 dtrx

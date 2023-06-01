@@ -32,7 +32,8 @@ dbus-elogind-x11
 exfat-utils
 fuse-exfat
 wget
-lxdm
+lightdm
+lightdm-gtk3-greeter
 mate
 mate-extra
 bash-completion

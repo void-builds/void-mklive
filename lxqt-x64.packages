@@ -48,7 +48,7 @@ gstreamer1-pipewire
 upower
 flatpak
 vim
-lxdm
+sddm
 lxqt
 lxterminal
 alsa-utils
