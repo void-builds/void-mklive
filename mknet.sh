@@ -77,7 +77,7 @@ _EOF
 #      SCRIPT EXECUTION STARTS HERE
 # ########################################
 
-while getopts "r:c:C:T:K:i:o:k:l:h" opt; do
+while getopts "r:c:C:T:K:i:o:k:l:Vh" opt; do
     case $opt in
         r) XBPS_REPOSITORY="--repository=$OPTARG $XBPS_REPOSITORY";;
         c) XBPS_CACHEDIR="--cachedir=$OPTARG";;
@@ -89,7 +89,8 @@ while getopts "r:c:C:T:K:i:o:k:l:h" opt; do
         C) BOOT_CMDLINE="$OPTARG";;
         T) BOOT_TITLE="$OPTARG";;
         S) SPLASH_IMAGE="OPTARG";;
-        h) usage;;
+        V) version; exit 0;;
+        *) usage;;
     esac
 done
 shift $((OPTIND - 1))

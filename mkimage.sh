@@ -94,8 +94,8 @@ while getopts "b:B:o:r:s:x:h:V" opt; do
         r) ROOT_FSTYPE="$OPTARG";;
         s) IMGSIZE="$OPTARG";;
         x) COMPRESSOR_THREADS="$OPTARG" ;;
-        V) echo "$PROGNAME @@MKLIVE_VERSION@@"; exit 0;;
-        h) usage;;
+        V) version; exit 0;;
+        *) usage;;
     esac
 done
 shift $((OPTIND - 1))

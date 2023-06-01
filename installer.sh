@@ -36,6 +36,7 @@ USERLOGIN_DONE=
 USERPASSWORD_DONE=
 USERNAME_DONE=
 USERGROUPS_DONE=
+USERACCOUNT_DONE=
 BOOTLOADER_DONE=
 PARTITIONS_DONE=
 NETWORK_DONE=
@@ -359,6 +360,15 @@ show_disks() {
     done
 }
 
+get_partfs() {
+    # Get fs type from configuration if available. This ensures
+    # that the user is shown the proper fs type if they install the system.
+    local part="$1"
+    local default="${2:-none}"
+    local fstype=$(grep "MOUNTPOINT ${part}" "$CONF_FILE"|awk '{print $3}')
+    echo "${fstype:-$default}"
+}
+
 show_partitions() {
     local dev fstype fssize p part
 
@@ -376,7 +386,7 @@ show_partitions() {
                 [ "$fstype" = "LVM2_member" ] && continue
                 fssize=$(lsblk -nr /dev/$part|awk '{print $4}'|head -1)
                 echo "/dev/$part"
-                echo "size:${fssize:-unknown};fstype:${fstype:-none}"
+                echo "size:${fssize:-unknown};fstype:$(get_partfs "/dev/$part")"
             fi
         done
     done
@@ -390,7 +400,7 @@ show_partitions() {
         fstype=$(lsblk -nfr $p|awk '{print $2}'|head -1)
         fssize=$(lsblk -nr $p|awk '{print $4}'|head -1)
         echo "${p}"
-        echo "size:${fssize:-unknown};fstype:${fstype:-none}"
+        echo "size:${fssize:-unknown};fstype:$(get_partfs "$p")"
     done
     # Software raid (md)
     for p in $(ls -d /dev/md* 2>/dev/null|grep '[0-9]'); do
@@ -401,7 +411,7 @@ show_partitions() {
             [ "$fstype" = "LVM2_member" ] && continue
             fssize=$(lsblk -nr /dev/$part|awk '{print $4}')
             echo "$p"
-            echo "size:${fssize:-unknown};fstype:${fstype:-none}"
+            echo "size:${fssize:-unknown};fstype:$(get_partfs "$p")"
         fi
     done
     # cciss(4) devices
@@ -411,13 +421,13 @@ show_partitions() {
         [ "$fstype" = "LVM2_member" ] && continue
         fssize=$(lsblk -nr /dev/cciss/$part|awk '{print $4}')
         echo "/dev/cciss/$part"
-        echo "size:${fssize:-unknown};fstype:${fstype:-none}"
+        echo "size:${fssize:-unknown};fstype:$(get_partfs "/dev/cciss/$part")"
     done
     if [ -e /sbin/lvs ]; then
         # LVM
         lvs --noheadings|while read lvname vgname perms size; do
             echo "/dev/mapper/${vgname}-${lvname}"
-            echo "size:${size};fstype:lvm"
+            echo "size:${size};fstype:$(get_partfs "/dev/mapper/${vgname}-${lvname}" lvm)"
         done
     fi
 }
@@ -478,6 +488,7 @@ menu_filesystems() {
             echo "MOUNTPOINT $dev $1 $2 $3 $4" >>$CONF_FILE
         fi
     done
+    FILESYSTEMS_DONE=1
 }
 
 menu_partitions() {
@@ -694,7 +705,7 @@ menu_useraccount() {
     while true; do
         _preset=$(get_option USERNAME)
         [ -z "$_preset" ] && _preset="Void User"
-        DIALOG --inputbox "Enter a user name for login '$(get_option USERLOGIN)' :" \
+        DIALOG --inputbox "Enter a display name for login '$(get_option USERLOGIN)' :" \
             ${INPUTSIZE} "$_preset"
         if [ $? -eq 0 ]; then
             set_option USERNAME "$(cat $ANSWER)"
@@ -767,10 +778,7 @@ menu_useraccount() {
 }
 
 set_useraccount() {
-    [ -z "$USERLOGIN_DONE" ] && return
-    [ -z "$USERPASSWORD_DONE" ] && return
-    [ -z "$USERNAME_DONE" ] && return
-    [ -z "$USERGROUPS_DONE" ] && return
+    [ -z "$USERACCOUNT_DONE" ] && return
     chroot $TARGETDIR useradd -m -G "$(get_option USERGROUPS)" \
         -c "$(get_option USERNAME)" "$(get_option USERLOGIN)"
     echo "$(get_option USERLOGIN):$(get_option USERPASSWORD)" | \
@@ -816,22 +824,28 @@ set_bootloader() {
     chroot $TARGETDIR grub-install $grub_args $dev >$LOG 2>&1
     if [ $? -ne 0 ]; then
         DIALOG --msgbox "${BOLD}${RED}ERROR:${RESET} \
-        failed to install GRUB to $dev!\nCheck $LOG for errors." ${MSGBOXSIZE}
+failed to install GRUB to $dev!\nCheck $LOG for errors." ${MSGBOXSIZE}
         DIE 1
     fi
     echo "Running grub-mkconfig on $TARGETDIR..." >$LOG
     chroot $TARGETDIR grub-mkconfig -o /boot/grub/grub.cfg >$LOG 2>&1
     if [ $? -ne 0 ]; then
         DIALOG --msgbox "${BOLD}${RED}ERROR${RESET}: \
-        failed to run grub-mkconfig!\nCheck $LOG for errors." ${MSGBOXSIZE}
+failed to run grub-mkconfig!\nCheck $LOG for errors." ${MSGBOXSIZE}
         DIE 1
     fi
 }
 
 test_network() {
+    # Reset the global variable to ensure that network is accessible for this test.
+    NETWORK_DONE=
+
     rm -f otime && \
         xbps-uhelper fetch https://repo-default.voidlinux.org/current/otime >$LOG 2>&1
-    if [ $? -eq 0 ]; then
+    local status=$?
+    rm -f otime
+
+    if [ "$status" -eq 0 ]; then
         DIALOG --msgbox "Network is working properly!" ${MSGBOXSIZE}
         NETWORK_DONE=1
         return 1
@@ -987,6 +1001,17 @@ menu_network() {
         else
             configure_net $dev
         fi
+    fi
+}
+
+validate_useraccount() {
+    # don't check that USERNAME has been set because it can be empty
+    local USERLOGIN=$(get_option USERLOGIN)
+    local USERPASSWORD=$(get_option USERPASSWORD)
+    local USERGROUPS=$(get_option USERGROUPS)
+
+    if [ -n "$USERLOGIN" ] && [ -n "$USERPASSWORD" ] && [ -n "$USERGROUPS" ]; then
+        USERACCOUNT_DONE=1
     fi
 }
 
@@ -1256,6 +1281,16 @@ please do so before starting the installation.${RESET}" ${MSGBOXSIZE}
         return 1
     fi
 
+    # Validate useraccount. All parameters must be set (name, password, login name, groups).
+    validate_useraccount
+
+    if [ -z "$USERACCOUNT_DONE" ]; then
+        DIALOG --yesno "${BOLD}The user account is not set up properly.${RESET}\n\n
+${BOLD}${RED}WARNING: no user will be created. You will only be able to login \
+with the root user in your new system.${RESET}\n\n
+${BOLD}Do you want to continue?${RESET}" 10 60 || return
+    fi
+
     DIALOG --yesno "${BOLD}The following operations will be executed:${RESET}\n\n
 ${BOLD}${TARGETFS}${RESET}\n
 ${BOLD}${RED}WARNING: data on partitions will be COMPLETELY DESTROYED for new \
@@ -1266,6 +1301,7 @@ ${BOLD}Do you want to continue?${RESET}" 20 80 || return
     # Create and mount filesystems
     create_filesystems
 
+    SOURCE_DONE="$(get_option SOURCE)"
     # If source not set use defaults.
     if [ "$(get_option SOURCE)" = "local" -o -z "$SOURCE_DONE" ]; then
         copy_rootfs
@@ -1288,7 +1324,12 @@ ${BOLD}Do you want to continue?${RESET}" 20 80 || return
         chroot $TARGETDIR dracut --no-hostonly --add-drivers "ahci" --force >>$LOG 2>&1
         INFOBOX "Removing temporary packages from target ..." 4 60
         echo "Removing temporary packages from target ..." >$LOG
-        xbps-remove -r $TARGETDIR -Ry dialog xtools-minimal xmirror >>$LOG 2>&1
+        TO_REMOVE="dialog xtools-minimal"
+        # only remove espeakup if it wasn't enabled in the live environment
+        if ! [ -e "/var/service/espeakup" ]; then
+            TO_REMOVE+=" espeakup"
+        fi
+        xbps-remove -r $TARGETDIR -Ry $TO_REMOVE >>$LOG 2>&1
         rmdir $TARGETDIR/mnt/target
     else
         # mount required fs
@@ -1316,6 +1357,7 @@ ${BOLD}Do you want to continue?${RESET}" 20 80 || return
     # Copy /etc/skel files for root.
     cp $TARGETDIR/etc/skel/.[bix]* $TARGETDIR/root
 
+    NETWORK_DONE="$(get_option NETWORK)"
     # network settings for target
     if [ -n "$NETWORK_DONE" ]; then
         local net="$(get_option NETWORK)"
@@ -1394,7 +1436,9 @@ menu_source() {
         "Local") src="local";;
         "Network") src="net";
             if [ -z "$NETWORK_DONE" ]; then
-                menu_network;
+                if test_network; then
+                    menu_network
+                fi
             fi;;
         *) return 1;;
     esac
@@ -1472,7 +1516,7 @@ menu() {
         "Locale") menu_locale && [ -n "$LOCALE_DONE" ] && DEFITEM="Timezone";;
         "Timezone") menu_timezone && [ -n "$TIMEZONE_DONE" ] && DEFITEM="RootPassword";;
         "RootPassword") menu_rootpassword && [ -n "$ROOTPASSWORD_DONE" ] && DEFITEM="UserAccount";;
-        "UserAccount") menu_useraccount && [ -n "$USERNAME_DONE" ] && [ -n "$USERPASSWORD_DONE" ] \
+        "UserAccount") menu_useraccount && [ -n "$USERLOGIN_DONE" ] && [ -n "$USERPASSWORD_DONE" ] \
                && DEFITEM="BootLoader";;
         "BootLoader") menu_bootloader && [ -n "$BOOTLOADER_DONE" ] && DEFITEM="Partition";;
         "Partition") menu_partitions && [ -n "$PARTITIONS_DONE" ] && DEFITEM="Filesystems";;

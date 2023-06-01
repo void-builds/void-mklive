@@ -1,7 +1,10 @@
 # The Void Linux image/live/rootfs maker and installer
+<<<<<<< HEAD
 ## *modified for Void Builds*
 
 
+=======
+>>>>>>> f80794ace0c8753edfd791bd1b79df2f83c88856
 
 This repository contains utilities for Void Linux:
 
@@ -13,30 +16,35 @@ This repository contains utilities for Void Linux:
  * mkrootfs  (The Void Linux rootfs maker for ARM platforms)
  * mknet (Script to generate netboot tarballs for Void)
 
+<<<<<<< HEAD
 ## Build Dependencies
  * make
 
+=======
+>>>>>>> f80794ace0c8753edfd791bd1b79df2f83c88856
 ## Dependencies
  * Compression type for the initramfs image
    * liblz4 (for lz4, xz) (default)
  * xbps>=0.45
  * qemu-user-static binaries (for mkrootfs)
+<<<<<<< HEAD
  * a valid gpg2 key for signing images (beyond the scope of this readme)
 
 
 
+=======
+ * bash
+
+>>>>>>> f80794ace0c8753edfd791bd1b79df2f83c88856
 ## Usage
 
-Type
-
-    $ make
-
-and then see the usage output:
+See the usage output:
 
     $ ./mklive.sh -h
     $ ./mkrootfs.sh -h
     $ ./mkimage.sh -h
 
+<<<<<<< HEAD
 ## Building an image
 
 **make sure you have your gpg2 key imported and export a .asc file from your key**
@@ -46,6 +54,9 @@ and then see the usage output:
 This will use the mklive.sh script to create a build with the packages listed in kde-x86.packages file. 
 
 ## Examples
+=======
+### Examples
+>>>>>>> f80794ace0c8753edfd791bd1b79df2f83c88856
 
 Build a native live image keyboard set to 'fr':
 
@@ -60,3 +71,23 @@ Build an x86\_64 musl live image with packages stored in a local repository:
     # ./mklive.sh -a x86_64-musl -r /path/to/host/binpkgs
 
 See the usage output for more information :-)
+
+## Kernel Command-line Parameters
+
+`void-mklive`-based live images support several kernel command-line arguments
+that can change the behavior of the live system:
+
+- `live.autologin` will skip the initial login screen on `tty1`.
+- `live.user` will change the username of the non-root user from the default `anon`. The password remains `voidlinux`.
+- `live.shell` sets the default shell for the non-root user in the live environment.
+- `live.screenreader` enables the console screenreader `espeakup` in the live environment.
+- `console` can be set to `ttyS0`, `hvc0`, or `hvsi0` to enable `agetty` on that serial console.
+- `locale.LANG` will set the `LANG` environment variable. Defaults to `en_US.UTF-8`.
+- `vconsole.keymap` will set the console keymap. Defaults to `us`.
+
+### Examples:
+
+- `live.autologin live.user=foo live.shell=/bin/bash` would create the user `foo` with the default shell `/bin/bash` on boot, and log them in automatically on `tty1`
+- `live.shell=/bin/bash` would set the default shell for the `anon` user to `/bin/bash`
+- `console=ttyS0 vconsole.keymap=cf` would enable `ttyS0` and set the keymap in the console to `cf`
+- `locale.LANG=fr_CA.UTF-8` would set the live system's language to `fr_CA.UTF-8`

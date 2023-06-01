@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # vim: set ts=4 sw=4 et:
 #
@@ -29,9 +29,12 @@
 trap 'error_out $? $LINENO' INT TERM 0
 umask 022
 
+. ./lib.sh
+
 readonly REQUIRED_PKGS="base-files libgcc dash coreutils sed tar gawk syslinux grub-i386-efi grub-x86_64-efi squashfs-tools xorriso"
 readonly INITRAMFS_PKGS="binutils xz device-mapper dhclient dracut-network openresolv"
 readonly PROGNAME=$(basename "$0")
+declare -a INCLUDE_DIRS=()
 
 info_msg() {
     printf "\033[1m$@\n\033[m"
@@ -132,11 +135,6 @@ install_packages() {
     fi
     chroot "$ROOTFS" env -i xbps-reconfigure -a
 
-    if [ -x installer.sh ]; then
-        install -Dm755 installer.sh "$ROOTFS"/usr/sbin/void-installer
-    else
-        install -Dm755 /usr/sbin/void-installer "$ROOTFS"/usr/sbin/void-installer
-    fi
     # Cleanup and remove useless stuff.
     rm -rf "$ROOTFS"/var/cache/* "$ROOTFS"/run/* "$ROOTFS"/var/run/*
 }
@@ -151,8 +149,11 @@ enable_services() {
     done
 }
 
-copy_include_directory() {
-    find "$INCLUDE_DIRECTORY" -mindepth 1 -maxdepth 1 -exec cp -rfpPv {} "$ROOTFS"/ \;
+copy_include_directories() {
+    for includedir in "${INCLUDE_DIRS[@]}"; do
+        info_msg "=> copying include directory '$includedir' ..."
+        find "$includedir" -mindepth 1 -maxdepth 1 -exec cp -rfpPv {} "$ROOTFS"/ \;
+    done
 }
 
 generate_initramfs() {
@@ -293,7 +294,7 @@ generate_iso_image() {
 #
 # main()
 #
-while getopts "a:b:r:c:C:T:Kk:l:i:I:S:s:o:p:v:h" opt; do
+while getopts "a:b:r:c:C:T:Kk:l:i:I:S:s:o:p:v:Vh" opt; do
     case $opt in
         a) BASE_ARCH="$OPTARG";;
         b) BASE_SYSTEM_PKG="$OPTARG";;
@@ -303,7 +304,7 @@ while getopts "a:b:r:c:C:T:Kk:l:i:I:S:s:o:p:v:h" opt; do
         k) KEYMAP="$OPTARG";;
         l) LOCALE="$OPTARG";;
         i) INITRAMFS_COMPRESSION="$OPTARG";;
-        I) INCLUDE_DIRECTORY="$OPTARG";;
+        I) INCLUDE_DIRS+=("$OPTARG");;
         S) SERVICE_LIST="$SERVICE_LIST $OPTARG";;
         s) SQUASHFS_COMPRESSION="$OPTARG";;
         o) OUTPUT_FILE="$OPTARG";;
@@ -311,8 +312,8 @@ while getopts "a:b:r:c:C:T:Kk:l:i:I:S:s:o:p:v:h" opt; do
         C) BOOT_CMDLINE="$OPTARG";;
         T) BOOT_TITLE="$OPTARG";;
         v) LINUX_VERSION="$OPTARG";;
-        h) usage;;
-	*) usage;;
+        V) version; exit 0;;
+        *) usage;;
     esac
 done
 shift $((OPTIND - 1))
@@ -361,7 +362,7 @@ ISOLINUX_DIR="$BOOT_DIR/isolinux"
 GRUB_DIR="$BOOT_DIR/grub"
 CURRENT_STEP=0
 STEP_COUNT=10
-[ -n "${INCLUDE_DIRECTORY}" ] && STEP_COUNT=$((STEP_COUNT+1))
+[ "${#INCLUDE_DIRS[@]}" -gt 0 ] && STEP_COUNT=$((STEP_COUNT+1))
 
 : ${SYSLINUX_DATADIR:="$VOIDHOSTDIR"/usr/lib/syslinux}
 : ${GRUB_DATADIR:="$VOIDHOSTDIR"/usr/share/grub}
@@ -417,9 +418,9 @@ install_packages
 print_step "Enabling services: ${SERVICE_LIST} ..."
 enable_services ${DEFAULT_SERVICE_LIST} ${SERVICE_LIST}
 
-if [ -n "${INCLUDE_DIRECTORY}" ];then
-    print_step "Copying directory structure into the rootfs: ${INCLUDE_DIRECTORY} ..."
-    copy_include_directory
+if [ "${#INCLUDE_DIRS[@]}" -gt 0 ];then
+    print_step "Copying directory structures into the rootfs ..."
+    copy_include_directories
 fi
 
 print_step "Generating initramfs image ($INITRAMFS_COMPRESSION)..."
