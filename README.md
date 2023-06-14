@@ -1,10 +1,8 @@
 # The Void Linux image/live/rootfs maker and installer
-<<<<<<< HEAD
 ## *modified for Void Builds*
 
 
 =======
->>>>>>> f80794ace0c8753edfd791bd1b79df2f83c88856
 
 This repository contains utilities for Void Linux:
 
@@ -16,12 +14,10 @@ This repository contains utilities for Void Linux:
  * mkrootfs  (The Void Linux rootfs maker for ARM platforms)
  * mknet (Script to generate netboot tarballs for Void)
 
-<<<<<<< HEAD
 ## Build Dependencies
  * make
 
 =======
->>>>>>> f80794ace0c8753edfd791bd1b79df2f83c88856
 ## Dependencies
  * Compression type for the initramfs image
    * liblz4 (for lz4, xz) (default)
@@ -35,7 +31,6 @@ This repository contains utilities for Void Linux:
 =======
  * bash
 
->>>>>>> f80794ace0c8753edfd791bd1b79df2f83c88856
 ## Usage
 
 See the usage output:
@@ -44,7 +39,6 @@ See the usage output:
     $ ./mkrootfs.sh -h
     $ ./mkimage.sh -h
 
-<<<<<<< HEAD
 ## Building an image
 
 **make sure you have your gpg2 key imported and export a .asc file from your key**
@@ -56,7 +50,6 @@ This will use the mklive.sh script to create a build with the packages listed in
 ## Examples
 =======
 ### Examples
->>>>>>> f80794ace0c8753edfd791bd1b79df2f83c88856
 
 Build a native live image keyboard set to 'fr':
 
