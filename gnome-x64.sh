@@ -21,6 +21,7 @@ until [ -f ${FILENAME}-x86_64-${KERNEL}-${DATE}.iso ];do
         -a x86_64 \
         -r "${CURRENT}" \
         -r "${MULTILIB}" \
+        -I "$(pwd)/extra" \
         -p "$(grep '^[^#].' ${DESKTOP}-x64.packages)" \
         -T "Void Linux ${DESKTOP} Unofficial" \
         -o ${FILENAME}-x86_64-${KERNEL}-${DATE}.iso \

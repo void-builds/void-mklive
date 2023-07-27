@@ -24,10 +24,11 @@ until [ -f ${FILENAME}-x86_64-${KERNEL}-${DATE}.iso ];do
         -a x86_64 \
         -r "${CURRENT}" \
         -r "${MULTILIB}" \
+        -I "$(pwd)/extra" \
         -p "$(grep '^[^#].' base-x64.packages)" \
         -T "${DESKTOP}" \
         -o ${FILENAME}-x86_64-${KERNEL}-${DATE}.iso \
-	-S "NetworkManager acpid"
+	-S "NetworkManager acpid dbus"
     
 done
 

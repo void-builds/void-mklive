@@ -18,12 +18,12 @@ BUILDDIR="$(pwd)/build"
 sudo ./mklive.sh \
     -a x86_64 \
     -r ${CURRENT} \
-#    -r ${MUTILIB} \
-    -r ${NONFREE} \
+    -r ${MUTILIB} \
+    -I "$(pwd)/extra" \
     -p "$(grep '^[^#].' ${DESKTOP}-x64.packages)" \
     -T "Void Linux ${DESKTOP} Unofficial" \
     -o ${FILENAME}-x86_64-${KERNEL}-${DATE}.iso \
-    -S "acpid dbus dhcpcd wpa_supplicant lightdm polkitd"
+    -S "acpid dbus dhcpcd NetworkManager lightdm polkitd"
 
 if [ ! -f ${FILENAME}-x86_64-${KERNEL}-${DATE}.iso ];then
     retries=${1}

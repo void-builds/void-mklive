@@ -50,6 +50,7 @@ libvdpau-va-gl
 vdpauinfo
 pipewire
 gstreamer1-pipewire
+alsa-plugins-pulseaudio
 upower
 flatpak
 gnome-terminal

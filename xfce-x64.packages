@@ -33,6 +33,7 @@
     pipewire
     wireplumber
     alsa-utils
+    alsa-plugins-pulseaudio
     gstreamer1-pipewire
 
 # NETWORK

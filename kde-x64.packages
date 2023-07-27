@@ -31,7 +31,6 @@
     pipewire
     gstreamer1-pipewire
     alsa-utils
-    alsa-plugins-pulseaudio
     paprefs
     pavucontrol
 
