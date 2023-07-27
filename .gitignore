@@ -12,3 +12,5 @@ stamps*
 !packer/scripts/*.sh
 void-live-*/
 release/
+extra
+includedir
