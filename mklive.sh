@@ -1,7 +1,5 @@
 #!/bin/bash
 #
-# vim: set ts=4 sw=4 et:
-#
 #-
 # Copyright (c) 2009-2015 Juan Romero Pardines.
 # All rights reserved.
@@ -26,7 +24,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #-
-trap 'error_out $? $LINENO' INT TERM 0
 umask 022
 
 . ./lib.sh
@@ -54,44 +51,51 @@ mount_pseudofs() {
     done
 }
 umount_pseudofs() {
-    umount -R -f "$ROOTFS"/sys >/dev/null 2>&1
-    umount -R -f "$ROOTFS"/dev >/dev/null 2>&1
-    umount -R -f "$ROOTFS"/proc >/dev/null 2>&1
+	for f in sys dev proc; do
+		if [ -d "$ROOTFS/$f" ] && ! umount -R -f "$ROOTFS/$f"; then
+			info_msg "ERROR: failed to unmount $ROOTFS/$f/"
+			return 1
+		fi
+	done
 }
 error_out() {
-    umount_pseudofs
-    [ -d "$BUILDDIR" -a -z "$KEEP_BUILDDIR" ] && rm -rf "$BUILDDIR"
-    exit "${1:=0}"
+	trap - INT TERM 0
+    umount_pseudofs || exit "${1:-0}"
+    [ -d "$BUILDDIR" ] && [ -z "$KEEP_BUILDDIR" ] && rm -rf --one-file-system "$BUILDDIR"
+    exit "${1:-0}"
 }
 
 usage() {
-    cat <<_EOF
-Usage: $PROGNAME [options]
+	cat <<-EOH
+	Usage: $PROGNAME [options]
 
-Options:
- -a <xbps-arch>     Set XBPS_ARCH (do not use it unless you know what it is)
- -b <system-pkg>    Set an alternative base-system package (defaults to base-system).
- -r <repo-url>      Use this XBPS repository (may be specified multiple times).
- -c <cachedir>      Use this XBPS cache directory (a subdirectory of current 
-directory if unset).
- -k <keymap>        Default keymap to use (us if unset)
- -l <locale>        Default locale to use (en_US.UTF-8 if unset).
- -i <lz4|gzip|bzip2|xz> Compression type for the initramfs image (xz if unset).
- -s <gzip|lzo|xz>     Compression type for the squashfs image (xz if unset)
- -o <file>          Output file name for the ISO image (auto if unset).
- -p "pkg pkgN ..."  Install additional packages into the ISO image.
- -I <includedir>    Include directory structure under given path into rootfs
- -S "service serviceN ..." Services to enable
+	Generates a basic live ISO image of Void Linux. This ISO image can be written
+	to a CD/DVD-ROM or any USB stick.
 
- -C "cmdline args"  Add additional kernel command line arguments.
- -T "title"         Modify the bootloader title.
- -v linux<version>  Install a custom Linux version on ISO image (linux meta-package if unset).
- -K                 Do not remove builddir.
-
-The $PROGNAME script generates a live image of the Void Linux distribution.
-This ISO image can be written to a CD/DVD-ROM or any USB stick.
-_EOF
-    exit 1
+	To generate a more complete live ISO image, use build-x86-images.sh.
+	
+	OPTIONS
+	 -a <arch>          Set XBPS_ARCH in the ISO image
+	 -b <system-pkg>    Set an alternative base package (default: base-system)
+	 -r <repo>          Use this XBPS repository. May be specified multiple times
+	 -c <cachedir>      Use this XBPS cache directory (default: ./xbps-cachedir-<arch>)
+	 -k <keymap>        Default keymap to use (default: us)
+	 -l <locale>        Default locale to use (default: en_US.UTF-8)
+	 -i <lz4|gzip|bzip2|xz>
+	                    Compression type for the initramfs image (default: xz)
+	 -s <gzip|lzo|xz>   Compression type for the squashfs image (default: xz)
+	 -o <file>          Output file name for the ISO image (default: automatic)
+	 -p "<pkg> ..."     Install additional packages in the ISO image
+	 -g "<pkg> ..."     Ignore packages when building the ISO image
+	 -I <includedir>    Include directory structure under given path in the ROOTFS
+	 -S "<service> ..." Enable services in the ISO image
+	 -C "<arg> ..."     Add additional kernel command line arguments
+	 -T <title>         Modify the bootloader title (default: Void Linux)
+	 -v linux<version>  Install a custom Linux version on ISO image (default: linux metapackage)
+	 -K                 Do not remove builddir
+	 -h                 Show this help and exit
+	 -V                 Show version and exit
+	EOH
 }
 
 copy_void_keys() {
@@ -137,6 +141,13 @@ install_packages() {
 
     # Cleanup and remove useless stuff.
     rm -rf "$ROOTFS"/var/cache/* "$ROOTFS"/run/* "$ROOTFS"/var/run/*
+}
+
+ignore_packages() {
+	mkdir -p "$ROOTFS"/etc/xbps.d
+	for pkg in $IGNORE_PKGS; do
+		echo "ignorepkg=$pkg" >> "$ROOTFS"/etc/xbps.d/mklive-ignore.conf
+	done
 }
 
 enable_services() {
@@ -263,7 +274,7 @@ generate_grub_efi_boot() {
 }
 
 generate_squashfs() {
-    umount_pseudofs
+    umount_pseudofs || exit 1
 
     # Find out required size for the rootfs and create an ext3fs image off it.
     ROOTFS_SIZE=$(du --apparent-size -sm "$ROOTFS"|awk '{print $1}')
@@ -302,27 +313,29 @@ generate_iso_image() {
 #
 # main()
 #
-while getopts "a:b:r:c:C:T:Kk:l:i:I:S:s:o:p:v:Vh" opt; do
-    case $opt in
-        a) BASE_ARCH="$OPTARG";;
-        b) BASE_SYSTEM_PKG="$OPTARG";;
-        r) XBPS_REPOSITORY="--repository=$OPTARG $XBPS_REPOSITORY";;
-        c) XBPS_CACHEDIR="$OPTARG";;
-        K) readonly KEEP_BUILDDIR=1;;
-        k) KEYMAP="$OPTARG";;
-        l) LOCALE="$OPTARG";;
-        i) INITRAMFS_COMPRESSION="$OPTARG";;
-        I) INCLUDE_DIRS+=("$OPTARG");;
-        S) SERVICE_LIST="$SERVICE_LIST $OPTARG";;
-        s) SQUASHFS_COMPRESSION="$OPTARG";;
-        o) OUTPUT_FILE="$OPTARG";;
-        p) PACKAGE_LIST="$PACKAGE_LIST $OPTARG";;
-        C) BOOT_CMDLINE="$OPTARG";;
-        T) BOOT_TITLE="$OPTARG";;
-        v) LINUX_VERSION="$OPTARG";;
-        V) version; exit 0;;
-        *) usage;;
-    esac
+while getopts "a:b:r:c:C:T:Kk:l:i:I:S:s:o:p:g:v:Vh" opt; do
+	case $opt in
+		a) BASE_ARCH="$OPTARG";;
+		b) BASE_SYSTEM_PKG="$OPTARG";;
+		r) XBPS_REPOSITORY="--repository=$OPTARG $XBPS_REPOSITORY";;
+		c) XBPS_CACHEDIR="$OPTARG";;
+		g) IGNORE_PKGS="$IGNORE_PKGS $OPTARG" ;;
+		K) readonly KEEP_BUILDDIR=1;;
+		k) KEYMAP="$OPTARG";;
+		l) LOCALE="$OPTARG";;
+		i) INITRAMFS_COMPRESSION="$OPTARG";;
+		I) INCLUDE_DIRS+=("$OPTARG");;
+		S) SERVICE_LIST="$SERVICE_LIST $OPTARG";;
+		s) SQUASHFS_COMPRESSION="$OPTARG";;
+		o) OUTPUT_FILE="$OPTARG";;
+		p) PACKAGE_LIST="$PACKAGE_LIST $OPTARG";;
+		C) BOOT_CMDLINE="$OPTARG";;
+		T) BOOT_TITLE="$OPTARG";;
+		v) LINUX_VERSION="$OPTARG";;
+		V) version; exit 0;;
+		h) usage; exit 0;;
+		*) usage >&2; exit 1;;
+	esac
 done
 shift $((OPTIND - 1))
 XBPS_REPOSITORY="$XBPS_REPOSITORY --repository=https://repo-default.voidlinux.org/current --repository=https://repo-default.voidlinux.org/current/musl"
@@ -356,6 +369,8 @@ if [ "$(id -u)" -ne 0 ]; then
     die "Must be run as root, exiting..."
 fi
 
+trap 'error_out $? $LINENO' INT TERM 0
+
 if [ -n "$ROOTDIR" ]; then
     BUILDDIR=$(mktemp --tmpdir="$ROOTDIR" -d)
 else
@@ -371,6 +386,7 @@ GRUB_DIR="$BOOT_DIR/grub"
 CURRENT_STEP=0
 STEP_COUNT=10
 [ "${#INCLUDE_DIRS[@]}" -gt 0 ] && STEP_COUNT=$((STEP_COUNT+1))
+[ -n "${IGNORE_PKGS}" ] && STEP_COUNT=$((STEP_COUNT+1))
 
 : ${SYSLINUX_DATADIR:="$VOIDHOSTDIR"/usr/lib/syslinux}
 : ${GRUB_DATADIR:="$VOIDHOSTDIR"/usr/share/grub}
@@ -418,6 +434,11 @@ install_prereqs
 mkdir -p "$ROOTFS"/etc
 [ -s data/motd ] && cp data/motd "$ROOTFS"/etc
 [ -s data/issue ] && cp data/issue "$ROOTFS"/etc
+
+if [ -n "$IGNORE_PKGS" ]; then
+	print_step "Ignoring packages in the rootfs: ${IGNORE_PKGS} ..."
+	ignore_packages
+fi
 
 print_step "Installing void pkgs into the rootfs: ${PACKAGE_LIST} ..."
 install_packages

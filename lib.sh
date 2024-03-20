@@ -288,15 +288,9 @@ set_target_arch_from_platform() {
     # the target architecture, but don't necessarily need to know it
     # internally (i.e. only run_cmd_chroot).
     case "$PLATFORM" in
-        bananapi*) XBPS_TARGET_ARCH="armv7l";;
-        beaglebone*) XBPS_TARGET_ARCH="armv7l";;
-        cubieboard2*|cubietruck*) XBPS_TARGET_ARCH="armv7l";;
-        odroid-u2*) XBPS_TARGET_ARCH="armv7l";;
-        odroid-c2*) XBPS_TARGET_ARCH="aarch64";;
         rpi-aarch64*) XBPS_TARGET_ARCH="aarch64";;
         rpi-armv7l*) XBPS_TARGET_ARCH="armv7l";;
         rpi-armv6l*) XBPS_TARGET_ARCH="armv6l";;
-        ci20*) XBPS_TARGET_ARCH="mipsel";;
         i686*) XBPS_TARGET_ARCH="i686";;
         x86_64*) XBPS_TARGET_ARCH="x86_64";;
         GCP*) XBPS_TARGET_ARCH="x86_64";;
@@ -345,7 +339,7 @@ rk33xx_flash_uboot() {
 # line.  This select allows us to get that information out.  This
 # fails silently if the toolname isn't known since this script is
 # sourced.
-case $1 in
+case "${1:-}" in
     platform2arch)
         PLATFORM=$2
         set_target_arch_from_platform
