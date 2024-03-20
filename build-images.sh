@@ -114,7 +114,7 @@ runBuilds(){
     ./e17-x64.sh
 
     if [ $(cat ${ERR_FILE}) = "ERR=1" ];then
-        echo "<b style="color:red">Build failed for image: 'i3', trying again at 00:00 MST</b></br>" >> ${HTMLDIR}/${FILENAME}
+        echo "<b style="color:red">Build failed for image: 'e17', trying again at 00:00 MST</b></br>" >> ${HTMLDIR}/${FILENAME}
         rm ${ERR_FILE}
         ${0} -bl
     else

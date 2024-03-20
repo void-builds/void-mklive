@@ -7,6 +7,7 @@ dialog
 cryptsetup 
 lvm2 
 mdadm 
+libxcrypt-compat
 
 # X PACKAGES
 elogind
@@ -36,7 +37,6 @@ xdg-desktop-portal-gtk
 xdg-desktop-portal-kde
 xdg-user-dirs
 xdg-user-dirs-gtk
-libappindicator
 AppStream
 libvdpau-va-gl 
 vdpauinfo

@@ -8,6 +8,7 @@ cryptsetup
 lvm2 
 mdadm 
 ConsoleKit2
+libxcrypt-compat
 
 # X PACKAGES
 xorg-minimal 
@@ -44,7 +45,6 @@ xdg-desktop-portal-gtk
 xdg-desktop-portal-kde
 xdg-user-dirs
 xdg-user-dirs-gtk
-libappindicator
 AppStream
 libvdpau-va-gl 
 vdpauinfo
