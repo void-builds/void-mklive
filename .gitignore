@@ -11,6 +11,10 @@ stamps*
 !dracut/*/*.sh
 !packer/scripts/*.sh
 void-live-*/
+distdir-*/
 release/
+
 extra
 includedir
+packer/cloud-*/
+packer/vagrant-*/

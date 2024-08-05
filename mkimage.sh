@@ -65,7 +65,7 @@ usage() {
 	 -b <fstype>    /boot filesystem type (default: vfat)
 	 -B <bsize>     /boot filesystem size (default: 256MiB)
 	 -r <fstype>    / filesystem type (default: ext4)
-	 -s <totalsize> Total image size (default: 2GiB)
+	 -s <totalsize> Total image size (default: 768MiB)
 	 -o <output>    Image filename (default: guessed automatically)
 	 -x <num>       Number of threads to use for image compression (default: dynamic)
 	 -h             Show this help and exit
@@ -128,10 +128,10 @@ case "$PLATFORM" in
         ;;
 esac
 # By default we build all platform images with a 256MiB boot partition
-# formated FAT16, and an approximately 1.88GiB root partition formatted
+# formated FAT16, and an approximately 512MiB root partition formatted
 # ext4.  More exotic combinations are of course possible, but this
 # combination works on all known platforms.
-: "${IMGSIZE:=2G}"
+: "${IMGSIZE:=768M}"
 : "${BOOT_FSTYPE:=vfat}"
 : "${BOOT_FSSIZE:=256MiB}"
 : "${ROOT_FSTYPE:=ext4}"
@@ -244,6 +244,10 @@ fi
 # Images are shipped with root as the only user by default, so we need to
 # ensure ssh login is possible for headless setups.
 sed -i "${ROOTFS}/etc/ssh/sshd_config" -e 's|^#\(PermitRootLogin\) .*|\1 yes|g'
+
+# Grow rootfs to fill the media on boot
+run_cmd_target "xbps-install -Syr $ROOTFS cloud-guest-utils"
+sed -i "${ROOTFS}/etc/default/growpart" -e 's/#ENABLE/ENABLE/'
 
 # This section does final configuration on the images.  In the case of
 # SBCs this writes the bootloader to the image or sets up other
