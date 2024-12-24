@@ -340,7 +340,10 @@ cleanUp(){
         echo "Removing local XBPS cache dir"
         rm -r xbps-cachedir-x86_64/
     fi
-
+    
+    echo "Removing mklive tmp directories..."
+    rm -r tmp*
+    
     echo "Removing orphans..."
 
     xbps-remove -yo
