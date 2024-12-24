@@ -506,17 +506,19 @@ menu_partitions() {
 
             DIALOG --title "Modify Partition Table on $device" --msgbox "\n
 ${BOLD}${software} will be executed in disk $device.${RESET}\n\n
-For BIOS systems, MBR or GPT partition tables are supported.\n
-To use GPT on PC BIOS systems an empty partition of 1MB must be added\n
-at the first 2GB of the disk with the TOGGLE \`bios_grub' enabled.\n
+For BIOS systems, MBR or GPT partition tables are supported. To use GPT\n
+on PC BIOS systems, an empty partition of 1MB must be added at the first\n
+2GB of the disk with the partition type \`BIOS Boot'.\n
 ${BOLD}NOTE: you don't need this on EFI systems.${RESET}\n\n
-For EFI systems GPT is mandatory and a FAT32 partition with at least\n
-100MB must be created with the TOGGLE \`boot', this will be used as\n
-EFI System Partition. This partition must have mountpoint as \`/boot/efi'.\n\n
-At least 1 partition is required for the rootfs (/).\n
-For swap, RAM*2 must be really enough. For / 600MB are required.\n\n
+For EFI systems, GPT is mandatory and a FAT32 partition with at least 100MB\n
+must be created with the partition type \`EFI System'. This will be used as\n
+the EFI System Partition. This partition must have the mountpoint \`/boot/efi'.\n\n
+At least 1 partition is required for the rootfs (/). For this partition,\n
+at least 2GB is required, but more is recommended. The rootfs partition\n
+should have the partition type \`Linux Filesystem'. For swap, RAM*2\n
+should be enough and the partition type \`Linux swap' should be used.\n\n
 ${BOLD}WARNING: /usr is not supported as a separate partition.${RESET}\n
-${RESET}\n" 18 80
+${RESET}\n" 23 80
             if [ $? -eq 0 ]; then
                 while true; do
                     clear; $software $device; PARTITIONS_DONE=1
@@ -744,7 +746,7 @@ menu_useraccount() {
         fi
     done
 
-    _groups="wheel,audio,video,floppy,cdrom,optical,kvm,xbuilder"
+    _groups="wheel,audio,video,floppy,cdrom,optical,kvm,users,xbuilder"
     while true; do
         _desc="Select group membership for login '$(get_option USERLOGIN)':"
         for _group in $(cat /etc/group); do
@@ -757,7 +759,7 @@ menu_useraccount() {
                 _status=on
             fi
             # ignore the groups of root, existing users, and package groups
-            if [[ "${_gid}" -ge 1000 || "${_group}" = "_"* || "${_group}" = "root" ]]; then
+            if [[ "${_gid}" -ge 1000 || "${_group}" = "_"* || "${_group}" =~ ^(root|nogroup|chrony|dbus|lightdm|polkitd)$ ]]; then
                 continue
             fi
             if [ -z "${_checklist}" ]; then
@@ -1219,14 +1221,16 @@ copy_rootfs() {
 install_packages() {
     local _grub= _syspkg=
 
-    if [ -n "$EFI_SYSTEM" ]; then
-        if [ $EFI_FW_BITS -eq 32 ]; then
-            _grub="grub-i386-efi"
+    if [ "$(get_option BOOTLOADER)" != none ]; then
+        if [ -n "$EFI_SYSTEM" ]; then
+            if [ $EFI_FW_BITS -eq 32 ]; then
+                _grub="grub-i386-efi"
+            else
+                _grub="grub-x86_64-efi"
+            fi
         else
-            _grub="grub-x86_64-efi"
+            _grub="grub"
         fi
-    else
-        _grub="grub"
     fi
 
     _syspkg="base-system"
@@ -1250,7 +1254,11 @@ install_packages() {
         DIE 1
     fi
     xbps-reconfigure -r $TARGETDIR -f base-files >/dev/null 2>&1
-    chroot $TARGETDIR xbps-reconfigure -a
+    stdbuf -oL chroot $TARGETDIR xbps-reconfigure -a 2>&1 | \
+        DIALOG --title "Configuring base system packages..." --programbox 24 80
+    if [ $? -ne 0 ]; then
+        DIE 1
+    fi
 }
 
 enable_service() {
@@ -1332,7 +1340,13 @@ ${BOLD}Do you want to continue?${RESET}" 20 80 || return
         if ! [ -e "/var/service/brltty" ]; then
             TO_REMOVE+=" brltty"
         fi
-        xbps-remove -r $TARGETDIR -Ry $TO_REMOVE >>$LOG 2>&1
+        if [ "$(get_option BOOTLOADER)" = none ]; then
+            TO_REMOVE+=" grub-x86_64-efi grub-i386-efi grub"
+        fi
+        # uninstall separately to minimise errors
+        for pkg in $TO_REMOVE; do
+            xbps-remove -r $TARGETDIR -Ry "$pkg" >>$LOG 2>&1
+        done
         rmdir $TARGETDIR/mnt/target
     else
         # mount required fs

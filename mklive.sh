@@ -89,9 +89,12 @@ usage() {
 	 -g "<pkg> ..."     Ignore packages when building the ISO image
 	 -I <includedir>    Include directory structure under given path in the ROOTFS
 	 -S "<service> ..." Enable services in the ISO image
+	 -e <shell>         Default shell of the root user (must be absolute path).
+	                    Set the live.shell kernel argument to change the default shell of anon.
 	 -C "<arg> ..."     Add additional kernel command line arguments
 	 -T <title>         Modify the bootloader title (default: Void Linux)
-	 -v linux<version>  Install a custom Linux version on ISO image (default: linux metapackage)
+	 -v linux<version>  Install a custom Linux version on ISO image (default: linux metapackage).
+	                    Also accepts linux metapackages (linux-mainline, linux-lts).
 	 -K                 Do not remove builddir
 	 -h                 Show this help and exit
 	 -V                 Show version and exit
@@ -119,6 +122,17 @@ install_prereqs() {
     [ $? -ne 0 ] && die "Failed to install required software, exiting..."
 }
 
+post_install_packages() {
+    # Cleanup and remove useless stuff.
+    rm -rf "$ROOTFS"/var/cache/* "$ROOTFS"/run/* "$ROOTFS"/var/run/*
+
+    # boot failure if disks have raid logical volumes and this isn't loaded
+    for f in "$ROOTFS/usr/lib/modules/$KERNELVERSION/kernel/drivers/md/dm-raid.ko".*; do
+        echo "dm-raid" > "$ROOTFS"/etc/modules-load.d/dm-raid.conf
+        break
+    done
+}
+
 install_packages() {
     XBPS_ARCH=$BASE_ARCH "${XBPS_INSTALL_CMD}" -r "$ROOTFS" \
         ${XBPS_REPOSITORY} -c "$XBPS_CACHEDIR" -yn $PACKAGE_LIST $INITRAMFS_PKGS
@@ -137,10 +151,14 @@ install_packages() {
     if [ -f "$ROOTFS"/etc/default/libc-locales ]; then
         sed -e "s/\#\(${LOCALE}.*\)/\1/g" -i "$ROOTFS"/etc/default/libc-locales
     fi
+    if XBPS_ARCH=$BASE_ARCH "$XBPS_QUERY_CMD" -r "$ROOTFS" dkms >/dev/null 2>&1; then
+        # dkms modules alphabetically before dkms can't configure
+        # if dkms hasn't configured beforehand to create /var/lib/dkms
+        chroot "$ROOTFS" env -i xbps-reconfigure dkms
+    fi
     chroot "$ROOTFS" env -i xbps-reconfigure -a
 
-    # Cleanup and remove useless stuff.
-    rm -rf "$ROOTFS"/var/cache/* "$ROOTFS"/run/* "$ROOTFS"/var/run/*
+    post_install_packages
 }
 
 ignore_packages() {
@@ -158,6 +176,11 @@ enable_services() {
         fi
         ln -sf /etc/sv/$service $ROOTFS/etc/runit/runsvdir/default/
     done
+}
+
+change_shell() {
+    chroot "$ROOTFS" chsh -s "$ROOT_SHELL" root
+    [ $? -ne 0 ] && die "Failed to change the shell for root"
 }
 
 copy_include_directories() {
@@ -215,7 +238,7 @@ generate_isolinux_boot() {
         "$ISOLINUX_DIR"/isolinux.cfg
 
     # include memtest86+
-    cp -f "$VOIDHOSTDIR"/boot/memtest.bin "$BOOT_DIR"
+    cp -f "$VOIDHOSTDIR"/boot/memtest86+/memtest.bin "$BOOT_DIR"
 }
 
 generate_grub_efi_boot() {
@@ -270,7 +293,7 @@ generate_grub_efi_boot() {
     rm -rf "$GRUB_EFI_TMPDIR"
 
     # include memtest86+
-    cp -f "$VOIDHOSTDIR"/boot/memtest.efi "$BOOT_DIR"
+    cp -f "$VOIDHOSTDIR"/boot/memtest86+/memtest.efi "$BOOT_DIR"
 }
 
 generate_squashfs() {
@@ -313,7 +336,7 @@ generate_iso_image() {
 #
 # main()
 #
-while getopts "a:b:r:c:C:T:Kk:l:i:I:S:s:o:p:g:v:Vh" opt; do
+while getopts "a:b:r:c:C:T:Kk:l:i:I:S:e:s:o:p:g:v:Vh" opt; do
 	case $opt in
 		a) BASE_ARCH="$OPTARG";;
 		b) BASE_SYSTEM_PKG="$OPTARG";;
@@ -326,6 +349,7 @@ while getopts "a:b:r:c:C:T:Kk:l:i:I:S:s:o:p:g:v:Vh" opt; do
 		i) INITRAMFS_COMPRESSION="$OPTARG";;
 		I) INCLUDE_DIRS+=("$OPTARG");;
 		S) SERVICE_LIST="$SERVICE_LIST $OPTARG";;
+		e) ROOT_SHELL="$OPTARG";;
 		s) SQUASHFS_COMPRESSION="$OPTARG";;
 		o) OUTPUT_FILE="$OPTARG";;
 		p) PACKAGE_LIST="$PACKAGE_LIST $OPTARG";;
@@ -355,6 +379,7 @@ ARCH=$(xbps-uhelper arch)
 : ${SQUASHFS_COMPRESSION:=xz}
 : ${BASE_SYSTEM_PKG:=base-system}
 : ${BOOT_TITLE:="Void Linux"}
+: ${LINUX_VERSION:=linux}
 
 case $BASE_ARCH in
     x86_64*|i686*) ;;
@@ -387,6 +412,7 @@ CURRENT_STEP=0
 STEP_COUNT=10
 [ "${#INCLUDE_DIRS[@]}" -gt 0 ] && STEP_COUNT=$((STEP_COUNT+1))
 [ -n "${IGNORE_PKGS}" ] && STEP_COUNT=$((STEP_COUNT+1))
+[ -n "$ROOT_SHELL" ] && STEP_COUNT=$((STEP_COUNT+1))
 
 : ${SYSLINUX_DATADIR:="$VOIDHOSTDIR"/usr/lib/syslinux}
 : ${GRUB_DATADIR:="$VOIDHOSTDIR"/usr/share/grub}
@@ -408,18 +434,28 @@ XBPS_ARCH=$ARCH $XBPS_INSTALL_CMD -r "$VOIDHOSTDIR" ${XBPS_REPOSITORY} -S
 
 # Get linux version for ISO
 # If linux version option specified use
-if [ -n "$LINUX_VERSION" ]; then
-    if ! echo "$LINUX_VERSION" | grep "linux[0-9._]\+"; then
-        die "-v option must be in format linux<version>"
-    fi
+shopt -s extglob
+case "$LINUX_VERSION" in
+    linux+([0-9.]))
+        IGNORE_PKGS+=" linux"
+        PACKAGE_LIST+=" $LINUX_VERSION linux-base"
+        ;;
+    linux-@(mainline|lts))
+        IGNORE_PKGS+=" linux"
+        PACKAGE_LIST+=" $LINUX_VERSION"
+        LINUX_VERSION="$(XBPS_ARCH=$BASE_ARCH $XBPS_QUERY_CMD -r "$ROOTFS" ${XBPS_REPOSITORY:=-R} -x "$LINUX_VERSION" | grep 'linux[0-9._]\+')"
+        ;;
+    linux)
+        PACKAGE_LIST+=" linux"
+        LINUX_VERSION="$(XBPS_ARCH=$BASE_ARCH $XBPS_QUERY_CMD -r "$ROOTFS" ${XBPS_REPOSITORY:=-R} -x linux | grep 'linux[0-9._]\+')"
+        ;;
+    *)
+        die "-v option must be in format linux<version> or linux-<series>"
+        ;;
+esac
+shopt -u extglob
 
-    _linux_series="$LINUX_VERSION"
-    PACKAGE_LIST="$PACKAGE_LIST $LINUX_VERSION"
-else # Otherwise find latest stable version from linux meta-package
-    _linux_series=$(XBPS_ARCH=$BASE_ARCH $XBPS_QUERY_CMD -r "$ROOTFS" ${XBPS_REPOSITORY:=-R} -x linux | grep 'linux[0-9._]\+')
-fi
-
-_kver=$(XBPS_ARCH=$BASE_ARCH $XBPS_QUERY_CMD -r "$ROOTFS" ${XBPS_REPOSITORY:=-R} -p pkgver ${_linux_series})
+_kver="$(XBPS_ARCH=$BASE_ARCH $XBPS_QUERY_CMD -r "$ROOTFS" ${XBPS_REPOSITORY:=-R} -p pkgver $LINUX_VERSION)"
 KERNELVERSION=$($XBPS_UHELPER_CMD getpkgversion ${_kver})
 
 if [ "$?" -ne "0" ]; then
@@ -446,6 +482,11 @@ install_packages
 : ${DEFAULT_SERVICE_LIST:=agetty-tty1 agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6 udevd}
 print_step "Enabling services: ${SERVICE_LIST} ..."
 enable_services ${DEFAULT_SERVICE_LIST} ${SERVICE_LIST}
+
+if [ -n "$ROOT_SHELL" ]; then
+    print_step "Changing the root shell ..."
+    change_shell
+fi
 
 if [ "${#INCLUDE_DIRS[@]}" -gt 0 ];then
     print_step "Copying directory structures into the rootfs ..."
