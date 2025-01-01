@@ -319,17 +319,22 @@ genHtml(){
 cleanUp(){
 # Clean: mklive xbps cache, build dir| Remove: old kernels, orphan packages
 
+    echo "Checking build directory for unsucessful builds...."
     BUILDDIR="build"
-    if [ "$(ls -A $BUILDDIR)" ];then
-        current=`date +%s`
-        last_modified=`stat -c "%Y" ${BUILDDIR}/`
-
-        if [ $(($current-$last_modified)) -gt 180 ]; then 
-            echo "Removing unused image files.."
-            rm -v build/*; 
-        else 
-            mvImages; 
-        fi
+    if [ -d "${BUILDDIR}" ];then
+    	if [ "$(ls | wc -l $BUILDDIR)" = "9" ];then
+		echo "Found 9 files in ${BUILDDIR}"
+		echo "Moving 9 files to public downloads..."
+		mvImages
+	else
+            echo "Did not find all 9 files in build directory..."
+	    echo "Removing incomplete builds to space space..."
+	    rm ${BUILDDIR}/*.iso
+	fi
+		
+    else 
+    	echo "${BUILDDIR} is missing!" 
+       
         
     fi
     
