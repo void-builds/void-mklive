@@ -18,3 +18,4 @@ extra
 includedir
 packer/cloud-*/
 packer/vagrant-*/
+mklive-build*/
