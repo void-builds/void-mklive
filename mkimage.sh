@@ -65,7 +65,7 @@ usage() {
 	 -b <fstype>    /boot filesystem type (default: vfat)
 	 -B <bsize>     /boot filesystem size (default: 256MiB)
 	 -r <fstype>    / filesystem type (default: ext4)
-	 -s <totalsize> Total image size (default: 768MiB)
+	 -s <totalsize> Total image size (default: 900MiB)
 	 -o <output>    Image filename (default: guessed automatically)
 	 -x <num>       Number of threads to use for image compression (default: dynamic)
 	 -h             Show this help and exit
@@ -116,7 +116,7 @@ PLATFORM="${PLATFORM%-PLATFORMFS*}"
 
 # Be absolutely certain the platform is supported before continuing
 case "$PLATFORM" in
-    rpi-armv6l|rpi-armv7l|rpi-aarch64|GCP|pinebookpro|pinephone|rock64|rockpro64|*-musl);;
+    rpi-armv6l|rpi-armv7l|rpi-aarch64|GCP|pinebookpro|pinephone|rock64|rockpro64|asahi|*-musl);;
     *) die "The $PLATFORM is not supported, exiting..."
 esac
 
@@ -131,7 +131,7 @@ esac
 # formated FAT16, and an approximately 512MiB root partition formatted
 # ext4.  More exotic combinations are of course possible, but this
 # combination works on all known platforms.
-: "${IMGSIZE:=768M}"
+: "${IMGSIZE:=900M}"
 : "${BOOT_FSTYPE:=vfat}"
 : "${BOOT_FSSIZE:=256MiB}"
 : "${ROOT_FSTYPE:=ext4}"
@@ -348,6 +348,12 @@ GCP*)
 
     # Cleanup the chroot from anything that was setup for the
     # run_cmd_chroot commands
+    cleanup_chroot
+    ;;
+asahi*)
+    mount_pseudofs
+    run_cmd_chroot "${ROOTFS}" "grub-install --target=arm64-efi --efi-directory=/boot --removable"
+    run_cmd_chroot "${ROOTFS}" "xbps-reconfigure -f linux-asahi"
     cleanup_chroot
     ;;
 esac
