@@ -5,6 +5,7 @@
 *.tar.gz
 *.box
 *.asc
+sha256sums.txt
 xbps-cache
 xbps-cachedir*
 stamps*
