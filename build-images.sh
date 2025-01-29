@@ -347,7 +347,7 @@ cleanUp(){
     fi
     
     echo "Removing mklive tmp directories..."
-    rm -r tmp*
+    rm -r mklive-build.*
     
     echo "Removing orphans..."
 
