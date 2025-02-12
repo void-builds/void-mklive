@@ -77,3 +77,7 @@ Adapta
 papirus-icon-theme
 gnome-themes-standard
 adwaita-icon-theme
+
+# Graphics Nvidia
+nvidia
+nvidia-libs-32bit
