@@ -57,7 +57,6 @@ then use [*mkimage.sh*](#mkimagesh) to generate the image.
 
 =======
 ## Dependencies
-<<<<<<< HEAD
  * Compression type for the initramfs image
    * liblz4 (for lz4, xz) (default)
  * xbps>=0.45
@@ -66,7 +65,6 @@ then use [*mkimage.sh*](#mkimagesh) to generate the image.
 Note that void-mklive is not guaranteed to work on distributions other than Void
 Linux, or in containers.
 
-<<<<<<< HEAD
 See the usage output:
 
     $ ./mklive.sh -h
