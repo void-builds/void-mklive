@@ -64,6 +64,9 @@ jobs:
             org.opencontainers.image.title=Void Linux mklive container
             org.opencontainers.image.description=Image for building mklive images
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -77,7 +80,7 @@ jobs:
 
       - name: Build and push images
         id: build_and_push
-        uses: docker/bake-action@v3
+        uses: docker/bake-action@v5
         with:
           push: ${{ github.event_name != 'pull_request' }}
           targets: void-mklive
